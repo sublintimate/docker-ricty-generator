@@ -1,0 +1,171 @@
+--- a/ricty_generator.sh	2018-01-21 03:32:22.497038800 +0900
++++ b/ricty_generator.sh	2021-12-27 04:07:50.755739400 +0900
+@@ -91,6 +91,7 @@ modified_inconsolata_bold="Modified-Inco
+ modified_migu1m_generator="modified_migu1m_generator.pe"
+ modified_migu1m_regular="Modified-migu-1m-regular.sfd"
+ modified_migu1m_bold="Modified-migu-1m-bold.sfd"
++ricty_base_generator="ricty_base_generator.pe"
+ ricty_generator="ricty_generator.pe"
+ ricty_discord_generator="ricty_discord_generator.pe"
+ regular2oblique_converter="regular2oblique_converter.sh"
+@@ -568,6 +569,113 @@ Quit()
+ _EOT_
+ 
+ ########################################
++# Generate script for Ricty base
++########################################
++
++cat > ${tmpdir}/${ricty_base_generator} << _EOT_
++#!$fontforge_command -script
++
++# Print message
++Print("Generate Ricty base")
++
++# Set parameters
++inconsolata_list  = ["${tmpdir}/${modified_inconsolata_regular}", \\
++                     "${tmpdir}/${modified_inconsolata_bold}"]
++fontfamily        = "${ricty_familyname}"
++fontfamilysuffix  = "${ricty_familyname_suffix}"
++fontstyle_list    = ["Regular", "Bold"]
++fontweight_list   = [400,       700]
++panoseweight_list = [5,         8]
++copyright         = "Copyright (c) 2011-2017 Yasunori Yusa\n" \\
++                  + "Copyright (c) 2006 The Inconsolata Project Authors\n" \\
++                  + "Copyright (c) 2015 itouhiro\n" \\
++                  + "Copyright (c) 2015 M+ FONTS PROJECT\n" \\
++                  + "Copyright (c) 2003-2011 Information-technology Promotion Agency, Japan (IPA)\n" \\
++                  + "SIL Open Font License Version 1.1 (http://scripts.sil.org/ofl)\n" \\
++                  + "IPA Font License Agreement v1.0 (http://ipafont.ipa.go.jp/ipa_font_license_v1.html)"
++version           = "${ricty_version}-mod"
++
++# Begin loop of regular and bold
++i = 0
++while (i < SizeOf(fontstyle_list))
++    # Open new file
++    New()
++
++    # Set encoding to Unicode-bmp
++    Reencode("unicode")
++
++    # Set configuration
++    if (fontfamilysuffix != "")
++        SetFontNames(fontfamily + fontfamilysuffix + "-" + fontstyle_list[i], \\
++                     fontfamily + " " + fontfamilysuffix, \\
++                     fontfamily + " " + fontfamilysuffix + " " + fontstyle_list[i], \\
++                     fontstyle_list[i], \\
++                     copyright, version)
++    else
++        SetFontNames(fontfamily + "-" + fontstyle_list[i], \\
++                     fontfamily, \\
++                     fontfamily + " " + fontstyle_list[i], \\
++                     fontstyle_list[i], \\
++                     copyright, version)
++    endif
++    SetTTFName(0x409, 2, fontstyle_list[i])
++    SetTTFName(0x409, 3, "FontForge 2.0 : " + \$fullname + " : " + Strftime("%d-%m-%Y", 0))
++    ScaleToEm(860, 140)
++    SetOS2Value("Weight", fontweight_list[i]) # Book or Bold
++    SetOS2Value("Width",                   5) # Medium
++    SetOS2Value("FSType",                  0)
++    SetOS2Value("VendorID",           "PfEd")
++    SetOS2Value("IBMFamily",            2057) # SS Typewriter Gothic
++    SetOS2Value("WinAscentIsOffset",       0)
++    SetOS2Value("WinDescentIsOffset",      0)
++    SetOS2Value("TypoAscentIsOffset",      0)
++    SetOS2Value("TypoDescentIsOffset",     0)
++    SetOS2Value("HHeadAscentIsOffset",     0)
++    SetOS2Value("HHeadDescentIsOffset",    0)
++    SetOS2Value("WinAscent",             ${ricty_ascent})
++    SetOS2Value("WinDescent",            ${ricty_descent})
++    SetOS2Value("TypoAscent",            860)
++    SetOS2Value("TypoDescent",          -140)
++    SetOS2Value("TypoLineGap",             0)
++    SetOS2Value("HHeadAscent",           ${ricty_ascent})
++    SetOS2Value("HHeadDescent",         -${ricty_descent})
++    SetOS2Value("HHeadLineGap",            0)
++    SetPanose([2, 11, panoseweight_list[i], 9, 2, 2, 3, 2, 2, 7])
++
++    # Merge Inconsolata with Migu 1M
++    Print("Merge " + inconsolata_list[i]:t)
++    MergeFonts(inconsolata_list[i])
++
++    Print("Fix backtick glyph class")
++    Select(0u0060)
++    SetGlyphClass("base")
++
++    # Proccess before saving
++    Print("Process before saving (it may take a few minutes)")
++    Select(".notdef")
++    DetachAndRemoveGlyphs()
++    SelectWorthOutputting()
++    RoundToInt(); RemoveOverlap(); RoundToInt()
++    ClearHints()
++    ClearInstrs()
++
++    # Save Ricty
++    if (fontfamilysuffix != "")
++        Print("Save " + fontfamily + fontfamilysuffix + "-" + fontstyle_list[i] + ".ttf")
++        Generate("${tmpdir}/" + fontfamily + fontfamilysuffix + "-" + fontstyle_list[i] + ".ttf", "", 0x84)
++    else
++        Print("Save " + fontfamily + "-" + fontstyle_list[i] + ".ttf")
++        Generate("${tmpdir}/" + fontfamily + "-" + fontstyle_list[i] + ".ttf", "", 0x84)
++    endif
++    Close()
++
++    i += 1
++endloop
++
++Quit()
++_EOT_
++
++########################################
+ # Generate script for Ricty
+ ########################################
+ 
+@@ -700,8 +808,8 @@ while (i < SizeOf(fontstyle_list))
+     DetachAndRemoveGlyphs()
+     SelectWorthOutputting()
+     RoundToInt(); RemoveOverlap(); RoundToInt()
+-    AutoHint()
+-    AutoInstr()
++    ClearHints()
++    ClearInstrs()
+ 
+     # Save Ricty
+     if (fontfamilysuffix != "")
+@@ -1011,7 +1119,7 @@ endif
+ 
+ # Save Ricty Discord
+ Print("Save " + inputfamily + familysuffix + "-" + inputstyle + ".ttf")
+-Generate(inputfamily + familysuffix + "-" + inputstyle + ".ttf", "", 0x84)
++Generate("${tmpdir}/" + inputfamily + familysuffix + "-" + inputstyle + ".ttf", "", 0x84)
+ Close()
+ 
+ Quit()
+@@ -1098,12 +1206,21 @@ $fontforge_command -script ${tmpdir}/${m
+     2> $redirection_stderr || exit 4
+ $fontforge_command -script ${tmpdir}/${ricty_generator} \
+     2> $redirection_stderr || exit 4
+-$fontforge_command -script ${tmpdir}/${ricty_discord_generator} \
+-    ${ricty_familyname}${ricty_familyname_suffix}-Regular.ttf "${non_discorded_characters}" \
+-    2> $redirection_stderr || exit 4
+-$fontforge_command -script ${tmpdir}/${ricty_discord_generator} \
+-    ${ricty_familyname}${ricty_familyname_suffix}-Bold.ttf "${non_discorded_characters}" \
++$fontforge_command -script ${tmpdir}/${ricty_base_generator} \
+     2> $redirection_stderr || exit 4
++for style in "Regular" "Bold"; do
++    $fontforge_command -script ${tmpdir}/${ricty_discord_generator} \
++        ${tmpdir}/${ricty_familyname}${ricty_familyname_suffix}-${style}.ttf "${non_discorded_characters}" \
++        2> $redirection_stderr || exit 4
++done
++for suffix in "" "Discord"; do
++    for style in "Regular" "Bold"; do
++        font=${ricty_familyname}${ricty_familyname_suffix}${suffix}-${style}.ttf
++        ttfautohint ${tmpdir}/${font} ${tmpdir}/${font}.fix
++        pyftmerge ${tmpdir}/${font}.fix ${ricty_familyname}${ricty_familyname_suffix}-${style}.ttf
++        mv merged.ttf ${font}
++    done
++done
+ $fontforge_command -script ${tmpdir}/${regular2oblique_converter} \
+     ${ricty_familyname}${ricty_familyname_suffix}-Regular.ttf \
+     2> $redirection_stderr || exit 4

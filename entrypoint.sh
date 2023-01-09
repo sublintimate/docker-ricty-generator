@@ -14,13 +14,18 @@ unzip -u -j migu-1m.zip 1>&2
 
 ricty_generator $@ 1>&2
 
+# https://qiita.com/sugimount/items/29dd85f68c9680e700aa
+echo 'Generate powerline fonts' 1>&2
+find . -name "Ricty*.ttf" -print0 | xargs -0 fontforge -lang=py -script /opt/project/fontpatcher-develop/scripts/powerline-fontpatcher
+
+# https://qiita.com/mura1008/items/5699b41e2deaa6ddb8f1
 echo 'Revise character spacing' 1>&2
 for font in Ricty*.ttf; do
-  ttx -t OS/2 $font 1>&2
-  sed -i -e "s/xAvgCharWidth value=\".*\"/xAvgCharWidth value=\"500\"/" ${font%.ttf}.ttx 1>&2
-  mv $font $font.bak
-  ttx -m $font.bak ${font%.ttf}.ttx 1>&2
+  ttx -t OS/2 "$font" 1>&2
+  sed -i -e "s/xAvgCharWidth value=\".*\"/xAvgCharWidth value=\"500\"/" "${font%.ttf}.ttx" 1>&2
+  mv "$font" "$font.bak"
+  ttx -m "$font.bak" "${font%.ttf}.ttx" 1>&2
 done
 
 echo 'Compress font fils' 1>&2
-find . -name "Ricty*.ttf" | xargs zip -
+find . -name "Ricty*.ttf" -print0 | xargs -0 zip -
